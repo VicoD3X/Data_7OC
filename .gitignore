@@ -1,26 +1,2 @@
-# Environnements
 .venv/
 .env
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Notebooks
-.ipynb_checkpoints/
-
-# Données / modèles
-data/
-mlruns/
-*.pkl
-*.joblib
-*.onnx
-*.log
-
-# IDE
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
