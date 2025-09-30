@@ -1,43 +1,32 @@
-import pandas as pd
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.linear_model import LogisticRegression
-from sklearn.pipeline import Pipeline
 import pickle
 from pathlib import Path
+from sklearn.datasets import load_iris
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
 
-# =======================
-# Jeu de données jouet
-# =======================
-data = {
-    "tweet": [
-        "J'adore voyager avec Air Paradis",
-        "Air Paradis est nul, jamais à l'heure",
-        "Super service et bons prix",
-        "Horrible expérience, bagages perdus",
-        "Vol agréable et staff sympa",
-        "Très mauvaise compagnie aérienne"
-    ],
-    "label": [0, 1, 0, 1, 0, 1]  # 0 = positif/neutre, 1 = négatif
-}
+# Charger le dataset Iris
+iris = load_iris()
+X, y = iris.data, iris.target
 
-df = pd.DataFrame(data)
+# Split train/test
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# =======================
-# Pipeline (vectorizer + logistic regression)
-# =======================
-model = Pipeline([
-    ("vectorizer", CountVectorizer()),
-    ("classifier", LogisticRegression())
-])
+# Entraîner le modèle
+model = LogisticRegression(max_iter=200)
+model.fit(X_train, y_train)
 
-# Entraînement
-model.fit(df["tweet"], df["label"])
+print("✅ Modèle Iris entraîné avec LogisticRegression")
 
-# =======================
 # Sauvegarde du modèle
-# =======================
 Path("models").mkdir(exist_ok=True)
 with open("models/trained_model.pkl", "wb") as f:
     pickle.dump(model, f)
 
-print("✅ Modèle entraîné et sauvegardé dans models/trained_model.pkl")
+print("📂 Modèle sauvegardé dans models/trained_model.pkl")
+
+
+
+# Pour exécuter ce script :
+# activer l'environnement virtuel : .\.venv\Scripts\Activate
+# pour exécuter le script : python train_model.py
+# puis lancer l'application Streamlit : streamlit run app/streamlit_app.py
