@@ -1,3 +1,19 @@
+# Environnements virtuels
 .venv/
+env/
+venv/
+
+# Variables d'environnement
 .env
+
+# Données (trop lourdes pour Git)
 data/
+
+# Fichiers Python compilés / cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Dossiers générés par Jupyter
+.ipynb_checkpoints/
