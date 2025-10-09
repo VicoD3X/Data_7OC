@@ -1,19 +1,15 @@
-# app/main.py
 from fastapi import FastAPI, Body
-import pickle
+import joblib
 import numpy as np
-from pathlib import Path
 
-# Charger le modèle sauvegardé
-model_path = Path("models/trained_model.pkl")
-with open(model_path, "rb") as f:
-    model = pickle.load(f)
+app = FastAPI()
 
-app = FastAPI(title="API Iris - Démo")
+# Charger le modèle
+model = joblib.load("models/trained_model.pkl")
 
 @app.get("/")
 def root():
-    return {"message": "API is running 🚀"}
+    return {"message": "API is running"}
 
 @app.post("/predict")
 def predict(data: list = Body(...)):

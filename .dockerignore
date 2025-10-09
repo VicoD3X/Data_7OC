@@ -1,0 +1,21 @@
+# env / cache / git
+.venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+.ipynb_checkpoints/
+
+# données lourdes
+data/
+app/data/
+notebooks/
+mlruns/
+*.csv
+*.tsv
+*.zip
+*.parquet
+
+# fichiers système
+.DS_Store
+Thumbs.db

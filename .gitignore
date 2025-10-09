@@ -1,7 +1,9 @@
-# Environnements virtuels
-.venv/
+# === Environnements virtuels ===
+occ-env/
+.occ-env/
 env/
 venv/
+.venv/
 
 # Variables d'environnement
 .env
