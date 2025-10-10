@@ -1,13 +1,8 @@
 # app/streamlit_app.py
 import streamlit as st
 import pickle
-import numpy as np
 from pathlib import Path
-from sklearn.datasets import load_iris
 
-# =======================
-# Charger le modèle
-# =======================
 @st.cache_resource
 def load_model():
     model_path = Path("models/trained_model.pkl")
@@ -17,27 +12,23 @@ def load_model():
 
 model = load_model()
 
-# Charger noms des classes (Iris setosa, versicolor, virginica)
-iris = load_iris()
-class_names = iris.target_names
+st.title("Analyse de sentiment - Air Paradis")
 
-# =======================
-# Interface Streamlit
-# =======================
-st.title("🌸 Démo classification Iris")
-
-st.write("Entrez les caractéristiques de la fleur :")
-
-# Inputs utilisateur
-sepal_length = st.number_input("Sepal length", 0.0, 10.0, 5.1)
-sepal_width = st.number_input("Sepal width", 0.0, 10.0, 3.5)
-petal_length = st.number_input("Petal length", 0.0, 10.0, 1.4)
-petal_width = st.number_input("Petal width", 0.0, 10.0, 0.2)
+tweet = st.text_area("Saisissez un tweet", height=120, placeholder="Exemple : Flight delayed again...")
 
 if st.button("Prédire"):
-    features = np.array([[sepal_length, sepal_width, petal_length, petal_width]])
-    prediction = model.predict(features)[0]
-    st.success(f"Résultat : classe prédite = {class_names[prediction]}")
+    if not tweet.strip():
+        st.warning("Veuillez saisir un tweet.")
+    else:
+        pred = int(model.predict([tweet])[0])
+        label = "Positif" if pred == 1 else "Négatif"
+
+        st.write(f"Sentiment prédit : {label}")
+
+        # Affichage optionnel des probabilités si disponible
+        if hasattr(model, "predict_proba"):
+            proba = model.predict_proba([tweet])[0]
+            st.write(f"Probabilité négatif : {proba[0]:.3f} | probabilité positif : {proba[1]:.3f}")
 
 
 
