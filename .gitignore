@@ -11,6 +11,10 @@ venv/
 # Données (trop lourdes pour Git)
 data/
 
+# Ignorer tous les modèles sauf fasttext
+models/*
+!models/fasttext_model.bin
+
 # Fichiers Python compilés / cache
 __pycache__/
 *.pyc
