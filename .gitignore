@@ -17,5 +17,11 @@ __pycache__/
 *.pyo
 *.pyd
 
+# Caches de test
+.pytest_cache/
+
+# Fichier mlrun
+mlruns/
+
 # Dossiers générés par Jupyter
 .ipynb_checkpoints/
