@@ -53,44 +53,43 @@ jobs:
         run: |
           curl https://cli-assets.heroku.com/install.sh | sh
 
-      # 1) Déploiement SANS healthcheck intégré (pas de rollback auto ici)
+      # Déploiement AVEC healthcheck intégré (rollback auto si KO)
       - name: Deploy with Heroku Action
+        id: heroku-deploy
         uses: akhileshns/heroku-deploy@v3.14.15
         with:
           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
           heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
           heroku_email: ${{ secrets.HEROKU_EMAIL }}
           branch: main
-          rollbackonhealthcheckfailed: false
+          # endpoint Streamlit de santé
+          healthcheck: "https://${{ secrets.HEROKU_APP_NAME }}.herokuapp.com/_stcore/health"
+          delay: 60
+          rollbackonhealthcheckfailed: true
 
-      # 2) Notre healthcheck manuel, plus robuste (réessaie jusqu'à 5 min)
-      - name: Wait for app to become healthy (manual health check with retries)
-        run: |
-          set -e
-          APP="https://${{ secrets.HEROKU_APP_NAME }}.herokuapp.com"
-          ENDPOINTS=(
-            "/_stcore/health"
-            "/healthz"
-            "/"
-          )
-          echo "Probing health endpoints on $APP ..."
-          for ep in "${ENDPOINTS[@]}"; do
-            echo "Trying endpoint: $ep"
-            for i in {1..30}; do
-              code=$(curl -s -o /dev/null -w "%{http_code}" "$APP$ep" || true)
-              if [ "$code" = "200" ]; then
-                echo "✅ Healthy on $ep (HTTP 200)"
-                exit 0
-              fi
-              echo "Attempt $i/30 for $ep -> HTTP $code. Retrying in 10s..."
-              sleep 10
-            done
-          done
-          echo "❌ Healthcheck failed on all endpoints."
-          exit 1
-
-      # 3) Si ça échoue, on dump les logs Heroku pour comprendre
+      # Si le step précédent échoue (rollback déclenché), on affiche les logs pour diagnostiquer vite
       - name: Show Heroku logs on failure
         if: failure()
+        env:
+          HEROKU_EMAIL: ${{ secrets.HEROKU_EMAIL }}
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: |
-          heroku logs -n 200 -a ${{ secrets.HEROKU_APP_NAME }}
+          # s'assurer que la CLI est bien authentifiée pour les commandes qui suivent
+          cat > ~/.netrc <<EOF
+          machine api.heroku.com
+            login $HEROKU_EMAIL
+            password $HEROKU_API_KEY
+          machine git.heroku.com
+            login $HEROKU_EMAIL
+            password $HEROKU_API_KEY
+          EOF
+          chmod 600 ~/.netrc
+
+          echo "------ Heroku releases ------"
+          heroku releases -a ${{ secrets.HEROKU_APP_NAME }} || true
+
+          echo "------ Heroku processes ------"
+          heroku ps -a ${{ secrets.HEROKU_APP_NAME }} || true
+
+          echo "------ Last 300 Heroku logs ------"
+          heroku logs -n 300 -a ${{ secrets.HEROKU_APP_NAME }} || true

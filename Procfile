@@ -1,1 +1,1 @@
-web: streamlit run app/streamlit_app.py --server.port=$PORT --server.address=0.0.0.0
+web: sh -c "streamlit run app/streamlit_app.py --server.address=0.0.0.0 --server.port=$PORT --server.headless=true --server.enableCORS=false --server.enableXsrfProtection=false"
