@@ -16,7 +16,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11.9"   # cf. tuto GitHub Actions
+          python-version: "3.11.9"
 
       - name: Install dependencies
         run: |
@@ -36,6 +36,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ⬇️ Installe la CLI Heroku (résout le "heroku: not found")
+      - name: Install Heroku CLI
+        run: |
+          curl https://cli-assets.heroku.com/install.sh | sh
+          which heroku
+
+      # ⬇️ Déploiement via l'action officielle du Marketplace
       - name: Deploy to Heroku
         uses: akhileshns/heroku-deploy@v3.14.15
         with:
@@ -43,4 +50,4 @@ jobs:
           heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
           heroku_email: ${{ secrets.HEROKU_EMAIL }}
           branch: main
-          # pas de healthcheck -> on suit l'exemple minimal de l'action
+          # pas de healthcheck ajouté : on reste sur le setup simple du Marketplace
