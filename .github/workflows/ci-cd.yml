@@ -60,6 +60,6 @@ jobs:
           heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}   # nom EXACT de ton app Heroku
           heroku_email: ${{ secrets.HEROKU_EMAIL }}
           branch: main
-          healthcheck: "https://${{ secrets.HEROKU_APP_NAME }}.herokuapp.com/"
-          delay: 15
+          healthcheck: "https://${{ secrets.HEROKU_APP_NAME }}.herokuapp.com/healthz"
+          delay: 60
           rollbackonhealthcheckfailed: true
