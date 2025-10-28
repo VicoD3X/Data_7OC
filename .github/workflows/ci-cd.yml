@@ -1,106 +1,46 @@
-name: CI & Deploy to Heroku
+name: Python CI + Deploy to Heroku
 
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-  workflow_dispatch:
 
 jobs:
   test:
-    name: Run Pytest
+    name: Pytest
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11.9"
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          python-version: "3.11.9"   # cf. tuto GitHub Actions
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run tests
+      - name: Run pytest
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: pytest -q
 
   deploy:
-    name: Deploy to Heroku (only if tests pass)
+    name: Deploy to Heroku
     runs-on: ubuntu-latest
     needs: test
     if: ${{ needs.test.result == 'success' && github.ref == 'refs/heads/main' }}
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install Heroku CLI
-        run: |
-          curl https://cli-assets.heroku.com/install.sh | sh
-
-      # Déploiement SANS healthcheck intégré (pas de rollback auto)
-      - name: Deploy with Heroku Action
-        id: heroku-deploy
+      - name: Deploy to Heroku
         uses: akhileshns/heroku-deploy@v3.14.15
         with:
           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
           heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
           heroku_email: ${{ secrets.HEROKU_EMAIL }}
           branch: main
-          rollbackonhealthcheckfailed: false
-
-      # Healthcheck manuel RAPIDE (max ~60s) : on essaie / puis /_stcore/health
-      - name: Quick health check (<= 60s)
-        shell: bash
-        run: |
-          set -e
-          APP="https://${{ secrets.HEROKU_APP_NAME }}.herokuapp.com"
-          for ep in "/" "/_stcore/health"; do
-            echo "Checking $APP$ep ..."
-            for i in {1..12}; do
-              code=$(curl -s -o /dev/null -w "%{http_code}" "$APP$ep" || echo "000")
-              echo "Attempt $i/12 for $ep -> HTTP $code"
-              if [ "$code" = "200" ]; then
-                echo "✅ Healthy on $ep (HTTP 200)"
-                exit 0
-              fi
-              sleep 5
-            done
-          done
-          echo "❌ Healthcheck failed after 60s"
-          exit 1
-
-      # Affiche releases / ps / logs en cas d'échec — pas de '|| true', pas de heredoc
-      - name: Show Heroku releases / ps / logs on failure
-        if: failure()
-        shell: bash
-        env:
-          HEROKU_EMAIL: ${{ secrets.HEROKU_EMAIL }}
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-        run: |
-          printf "machine api.heroku.com\n  login %s\n  password %s\nmachine git.heroku.com\n  login %s\n  password %s\n" "$HEROKU_EMAIL" "$HEROKU_API_KEY" "$HEROKU_EMAIL" "$HEROKU_API_KEY" > ~/.netrc
-          chmod 600 ~/.netrc
-
-          echo "------ Heroku releases ------"
-          heroku releases -a ${{ secrets.HEROKU_APP_NAME }}
-
-          echo "------ Heroku processes ------"
-          heroku ps -a ${{ secrets.HEROKU_APP_NAME }}
-
-          echo "------ Last 300 Heroku logs ------"
-          heroku logs -n 300 -a ${{ secrets.HEROKU_APP_NAME }}
+          # pas de healthcheck -> on suit l'exemple minimal de l'action
