@@ -5,7 +5,7 @@ import numpy as np
 app = FastAPI()
 
 # Charger le modèle
-model = joblib.load("models/trained_model.pkl")
+model = joblib.load("models/tfidf_vectorizer.pkl")
 
 @app.get("/")
 def root():

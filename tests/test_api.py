@@ -1,25 +1,18 @@
-import sys, os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from app.main import app
 from fastapi.testclient import TestClient
+from app.main import app
 
+def test_root_ok():
+    client = TestClient(app)
+    r = client.get("/")
+    assert r.status_code == 200
+    assert r.json().get("message") == "API is running"
 
-client = TestClient(app)
-
-def test_root():
-    res = client.get("/")
-    assert res.status_code == 200
-    assert "API is running" in res.json()["message"]
-
-def test_predict():
-    payload = [[5.1, 3.5, 1.4, 0.2]]
-    res = client.post("/predict", json=payload)
-    assert res.status_code == 200
-    assert "predictions" in res.json()
-
-
-
-
-# lancement  # pytest tests/test_api.py -v
-# pytest -vv
+def test_predict_ok():
+    client = TestClient(app)
+    payload = ["great flight", "horrible service"]
+    r = client.post("/predict", json=payload)
+    assert r.status_code == 200
+    preds = r.json().get("predictions")
+    assert isinstance(preds, list) and len(preds) == 2
+    for p in preds:
+        assert p in [0, 1]
