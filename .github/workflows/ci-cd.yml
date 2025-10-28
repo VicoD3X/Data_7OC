@@ -62,25 +62,24 @@ jobs:
           heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
           heroku_email: ${{ secrets.HEROKU_EMAIL }}
           branch: main
-          healthcheck: "https://${{ secrets.HEROKU_APP_NAME }}.herokuapp.com/_stcore/health"
-          delay: 60
+          # ➜ on repasse sur la racine, qui doit renvoyer 200 avec Streamlit
+          healthcheck: "https://${{ secrets.HEROKU_APP_NAME }}.herokuapp.com/"
+          delay: 90
           rollbackonhealthcheckfailed: true
 
-      # Affiche releases, ps, logs si le déploiement échoue (plus de heredoc)
+      # Affiche releases, ps, logs si le déploiement échoue
       - name: Show Heroku logs on failure
         if: failure()
+        shell: bash
         env:
           HEROKU_EMAIL: ${{ secrets.HEROKU_EMAIL }}
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: |
           printf "machine api.heroku.com\n  login %s\n  password %s\nmachine git.heroku.com\n  login %s\n  password %s\n" "$HEROKU_EMAIL" "$HEROKU_API_KEY" "$HEROKU_EMAIL" "$HEROKU_API_KEY" > ~/.netrc
           chmod 600 ~/.netrc
-
           echo "------ Heroku releases ------"
           heroku releases -a ${{ secrets.HEROKU_APP_NAME }} || true
-
           echo "------ Heroku processes ------"
           heroku ps -a ${{ secrets.HEROKU_APP_NAME }} || true
-
           echo "------ Last 300 Heroku logs ------"
           heroku logs -n 300 -a ${{ secrets.HEROKU_APP_NAME }} || true
