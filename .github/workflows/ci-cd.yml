@@ -62,27 +62,18 @@ jobs:
           heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
           heroku_email: ${{ secrets.HEROKU_EMAIL }}
           branch: main
-          # endpoint Streamlit de santé
           healthcheck: "https://${{ secrets.HEROKU_APP_NAME }}.herokuapp.com/_stcore/health"
           delay: 60
           rollbackonhealthcheckfailed: true
 
-      # Si le step précédent échoue (rollback déclenché), on affiche les logs pour diagnostiquer vite
+      # Affiche releases, ps, logs si le déploiement échoue (plus de heredoc)
       - name: Show Heroku logs on failure
         if: failure()
         env:
           HEROKU_EMAIL: ${{ secrets.HEROKU_EMAIL }}
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: |
-          # s'assurer que la CLI est bien authentifiée pour les commandes qui suivent
-          cat > ~/.netrc <<EOF
-          machine api.heroku.com
-            login $HEROKU_EMAIL
-            password $HEROKU_API_KEY
-          machine git.heroku.com
-            login $HEROKU_EMAIL
-            password $HEROKU_API_KEY
-          EOF
+          printf "machine api.heroku.com\n  login %s\n  password %s\nmachine git.heroku.com\n  login %s\n  password %s\n" "$HEROKU_EMAIL" "$HEROKU_API_KEY" "$HEROKU_EMAIL" "$HEROKU_API_KEY" > ~/.netrc
           chmod 600 ~/.netrc
 
           echo "------ Heroku releases ------"
