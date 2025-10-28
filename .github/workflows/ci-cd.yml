@@ -53,7 +53,7 @@ jobs:
         run: |
           curl https://cli-assets.heroku.com/install.sh | sh
 
-      # Déploiement AVEC healthcheck intégré (rollback auto si KO)
+      # Déploiement SANS healthcheck intégré (pas de rollback auto)
       - name: Deploy with Heroku Action
         id: heroku-deploy
         uses: akhileshns/heroku-deploy@v3.14.15
@@ -62,13 +62,31 @@ jobs:
           heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
           heroku_email: ${{ secrets.HEROKU_EMAIL }}
           branch: main
-          # ➜ on repasse sur la racine, qui doit renvoyer 200 avec Streamlit
-          healthcheck: "https://${{ secrets.HEROKU_APP_NAME }}.herokuapp.com/"
-          delay: 90
-          rollbackonhealthcheckfailed: true
+          rollbackonhealthcheckfailed: false
 
-      # Affiche releases, ps, logs si le déploiement échoue
-      - name: Show Heroku logs on failure
+      # Healthcheck manuel RAPIDE (max ~60s) : on essaie / puis /_stcore/health
+      - name: Quick health check (<= 60s)
+        shell: bash
+        run: |
+          set -e
+          APP="https://${{ secrets.HEROKU_APP_NAME }}.herokuapp.com"
+          for ep in "/" "/_stcore/health"; do
+            echo "Checking $APP$ep ..."
+            for i in {1..12}; do
+              code=$(curl -s -o /dev/null -w "%{http_code}" "$APP$ep" || echo "000")
+              echo "Attempt $i/12 for $ep -> HTTP $code"
+              if [ "$code" = "200" ]; then
+                echo "✅ Healthy on $ep (HTTP 200)"
+                exit 0
+              fi
+              sleep 5
+            done
+          done
+          echo "❌ Healthcheck failed after 60s"
+          exit 1
+
+      # Affiche releases / ps / logs en cas d'échec — pas de '|| true', pas de heredoc
+      - name: Show Heroku releases / ps / logs on failure
         if: failure()
         shell: bash
         env:
@@ -77,9 +95,12 @@ jobs:
         run: |
           printf "machine api.heroku.com\n  login %s\n  password %s\nmachine git.heroku.com\n  login %s\n  password %s\n" "$HEROKU_EMAIL" "$HEROKU_API_KEY" "$HEROKU_EMAIL" "$HEROKU_API_KEY" > ~/.netrc
           chmod 600 ~/.netrc
+
           echo "------ Heroku releases ------"
-          heroku releases -a ${{ secrets.HEROKU_APP_NAME }} || true
+          heroku releases -a ${{ secrets.HEROKU_APP_NAME }}
+
           echo "------ Heroku processes ------"
-          heroku ps -a ${{ secrets.HEROKU_APP_NAME }} || true
+          heroku ps -a ${{ secrets.HEROKU_APP_NAME }}
+
           echo "------ Last 300 Heroku logs ------"
-          heroku logs -n 300 -a ${{ secrets.HEROKU_APP_NAME }} || true
+          heroku logs -n 300 -a ${{ secrets.HEROKU_APP_NAME }}
