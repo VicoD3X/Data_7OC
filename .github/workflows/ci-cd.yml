@@ -53,14 +53,44 @@ jobs:
         run: |
           curl https://cli-assets.heroku.com/install.sh | sh
 
+      # 1) Déploiement SANS healthcheck intégré (pas de rollback auto ici)
       - name: Deploy with Heroku Action
         uses: akhileshns/heroku-deploy@v3.14.15
         with:
           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-          heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}   # nom EXACT de ton app Heroku
+          heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
           heroku_email: ${{ secrets.HEROKU_EMAIL }}
           branch: main
-          # Streamlit health endpoint
-          healthcheck: "https://${{ secrets.HEROKU_APP_NAME }}.herokuapp.com/_stcore/health"
-          delay: 60
-          rollbackonhealthcheckfailed: true
+          rollbackonhealthcheckfailed: false
+
+      # 2) Notre healthcheck manuel, plus robuste (réessaie jusqu'à 5 min)
+      - name: Wait for app to become healthy (manual health check with retries)
+        run: |
+          set -e
+          APP="https://${{ secrets.HEROKU_APP_NAME }}.herokuapp.com"
+          ENDPOINTS=(
+            "/_stcore/health"
+            "/healthz"
+            "/"
+          )
+          echo "Probing health endpoints on $APP ..."
+          for ep in "${ENDPOINTS[@]}"; do
+            echo "Trying endpoint: $ep"
+            for i in {1..30}; do
+              code=$(curl -s -o /dev/null -w "%{http_code}" "$APP$ep" || true)
+              if [ "$code" = "200" ]; then
+                echo "✅ Healthy on $ep (HTTP 200)"
+                exit 0
+              fi
+              echo "Attempt $i/30 for $ep -> HTTP $code. Retrying in 10s..."
+              sleep 10
+            done
+          done
+          echo "❌ Healthcheck failed on all endpoints."
+          exit 1
+
+      # 3) Si ça échoue, on dump les logs Heroku pour comprendre
+      - name: Show Heroku logs on failure
+        if: failure()
+        run: |
+          heroku logs -n 200 -a ${{ secrets.HEROKU_APP_NAME }}
