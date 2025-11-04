@@ -4,15 +4,14 @@ import logging
 from pathlib import Path
 import pickle
 import streamlit as st
+from opencensus.ext.azure.log_exporter import AzureLogHandler
 
 # -----------------------
 # Azure App Insights (minimal)
 # -----------------------
-from opencensus.ext.azure.log_exporter import AzureLogHandler
-
 logger = logging.getLogger("airparadis.streamlit")
 logger.setLevel(logging.INFO)
-_conn = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")  # vient de Heroku Config Vars
+_conn = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")  # Heroku Config Var
 if _conn:
     logger.addHandler(AzureLogHandler(connection_string=_conn))
 
@@ -54,13 +53,11 @@ if "last_pred" not in st.session_state:
 if "last_proba" not in st.session_state:
     st.session_state.last_proba = None
 
-# Boutons
 col1, col2 = st.columns(2)
 with col1:
-    predict_clicked = st.button("Prédire", type="primary")
-with col2:
-    feedback_clicked = st.button("Signaler comme incorrect", disabled=st.session_state.last_pred is None)
+    predict_clicked = st.button("Prédire", type="primary", key="btn_predict")
 
+# --- Prédiction ---
 if predict_clicked:
     if not tweet.strip():
         st.warning("Veuillez saisir un tweet.")
@@ -80,16 +77,19 @@ if predict_clicked:
         st.session_state.last_pred = pred
         st.session_state.last_proba = proba_max
 
-if feedback_clicked:
-    # Envoie le log à Azure (si la connection string est présente)
-    if st.session_state.last_tweet and st.session_state.last_pred is not None:
-        try:
-            log_bad_pred(st.session_state.last_tweet, st.session_state.last_pred, st.session_state.last_proba)
-            st.success("Merci, votre signalement a été enregistré.")
-        except Exception as e:
-            st.error(f"Impossible d'envoyer le signalement: {e}")
-    else:
-        st.warning("Faites d’abord une prédiction.")
+# --- Bouton "Signaler" rendu APRÈS la mise à jour de l'état ---
+with col2:
+    if st.session_state.last_pred is not None:
+        if st.button("Signaler comme incorrect", key="btn_feedback"):
+            try:
+                log_bad_pred(
+                    st.session_state.last_tweet,
+                    st.session_state.last_pred,
+                    st.session_state.last_proba
+                )
+                st.success("Merci, votre signalement a été enregistré.")
+            except Exception as e:
+                st.error(f"Impossible d'envoyer le signalement: {e}")
 
 # =======================
 # COMMENT ACTIVER LE MODE DÉVELOPPEUR STREAMLIT
