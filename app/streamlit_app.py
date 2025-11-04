@@ -16,7 +16,7 @@ if _conn:
     logger.addHandler(AzureLogHandler(connection_string=_conn))
 
 def log_bad_pred(tweet_text: str, y_pred: int, y_proba: float | None = None):
-    # Envoie un log "bad_pred" avec le tweet + la prédiction (+ proba si dispo)
+    """Envoie un log 'bad_pred' avec le tweet + la prédiction (+ proba si dispo)"""
     dims = {
         "kind": "bad_pred",
         "source": "streamlit",
@@ -26,6 +26,19 @@ def log_bad_pred(tweet_text: str, y_pred: int, y_proba: float | None = None):
     if y_proba is not None:
         dims["probability"] = float(y_proba)
     logger.warning("bad_pred", extra={"custom_dimensions": dims})
+
+
+def log_good_pred(tweet_text: str, y_pred: int, y_proba: float | None = None):
+    """Envoie un log 'good_pred' avec le tweet + la prédiction (+ proba si dispo)"""
+    dims = {
+        "kind": "good_pred",
+        "source": "streamlit",
+        "tweet_text": tweet_text,
+        "prediction": int(y_pred),
+    }
+    if y_proba is not None:
+        dims["probability"] = float(y_proba)
+    logger.warning("good_pred", extra={"custom_dimensions": dims})  # même niveau que bad_pred
 
 # -----------------------
 # App Streamlit
@@ -77,6 +90,12 @@ if predict_clicked:
         st.session_state.last_pred = pred
         st.session_state.last_proba = proba_max
 
+        # Log automatique d'une bonne prédiction par défaut
+        try:
+            log_good_pred(tweet, pred, proba_max)
+        except Exception as e:
+            st.warning(f"Échec du log Azure Insights : {e}")
+
 # --- Bouton "Signaler" rendu APRÈS la mise à jour de l'état ---
 with col2:
     if st.session_state.last_pred is not None:
@@ -90,6 +109,8 @@ with col2:
                 st.success("Merci, votre signalement a été enregistré.")
             except Exception as e:
                 st.error(f"Impossible d'envoyer le signalement: {e}")
+
+
 
 # =======================
 # COMMENT ACTIVER LE MODE DÉVELOPPEUR STREAMLIT
