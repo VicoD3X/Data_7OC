@@ -38,17 +38,17 @@ def log_bad_pred(tweet_text: str, y_pred: int, y_proba: float | None = None):
     logger.warning("bad_pred", extra={"custom_dimensions": dims})
 
 
-def log_good_pred(tweet_text: str, y_pred: int, y_proba: float | None = None):
-    """Envoie un log 'good_pred' avec le tweet + la prédiction (+ proba si dispo)"""
+def log_predict_api(tweet_text: str, y_pred: int, y_proba: float | None = None):
+    """Envoie un log 'predict_api' pour chaque prédiction API"""
     dims = {
-        "kind": "good_pred",
+        "kind": "predict_api",
         "source": "streamlit",
         "tweet_text": tweet_text,
         "prediction": int(y_pred),
     }
     if y_proba is not None:
         dims["probability"] = float(y_proba)
-    logger.warning("good_pred", extra={"custom_dimensions": dims})  # même niveau que bad_pred
+    logger.info("predict_api", extra={"custom_dimensions": dims})
 
 # -----------------------
 # App Streamlit
@@ -101,12 +101,11 @@ if predict_clicked:
         st.session_state.last_pred = pred
         st.session_state.last_proba = proba_max
 
-        # 🪵 Log automatique vers Azure Insights
+        # 🪵 Log automatique vers Azure Insights (événement "predict_api")
         try:
-            log_good_pred(tweet, pred, proba_max)
+            log_predict_api(tweet, pred, proba_max)
         except Exception as e:
             st.warning(f"Échec du log Azure Insights : {e}")
-
 
 # --- Bouton "Signaler" rendu APRÈS la mise à jour de l'état ---
 with col2:
@@ -120,9 +119,7 @@ with col2:
                 )
                 st.success("Merci, votre signalement a été enregistré.")
             except Exception as e:
-                st.error(f"Impossible d'envoyer le signalement: {e})")
-
-
+                st.error(f"Impossible d'envoyer le signalement: {e}")
 
 
 
