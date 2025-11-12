@@ -44,3 +44,8 @@ models/
 # === Divers ===
 .DS_Store
 Thumbs.db
+
+
+# Ignorer les présentations PowerPoint
+*.pptx
+*.ppt

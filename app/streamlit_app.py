@@ -77,24 +77,26 @@ if predict_clicked:
     else:
         pred = int(model.predict([tweet])[0])
         label = "Positif" if pred == 1 else "Négatif"
-        st.write(f"Sentiment prédit : {label}")
+
+        # ✅ Affichage simplifié pour la version production
+        st.success(f"Sentiment détecté : {label}")
 
         proba_max = None
         if hasattr(model, "predict_proba"):
             proba = model.predict_proba([tweet])[0]
-            st.write(f"Probabilité négatif : {proba[0]:.3f} | probabilité positif : {proba[1]:.3f}")
-            proba_max = float(max(proba[0], proba[1]))
+            proba_max = float(max(proba[0], proba[1]))  # Conservée pour les logs, non affichée
 
-        # Mémoriser pour pouvoir signaler ensuite
+        # 🔁 Mémorisation pour le feedback utilisateur
         st.session_state.last_tweet = tweet
         st.session_state.last_pred = pred
         st.session_state.last_proba = proba_max
 
-        # Log automatique d'une bonne prédiction par défaut
+        # 🪵 Log automatique vers Azure Insights
         try:
             log_good_pred(tweet, pred, proba_max)
         except Exception as e:
             st.warning(f"Échec du log Azure Insights : {e}")
+
 
 # --- Bouton "Signaler" rendu APRÈS la mise à jour de l'état ---
 with col2:
