@@ -9,11 +9,21 @@ from opencensus.ext.azure.log_exporter import AzureLogHandler
 # -----------------------
 # Azure App Insights (minimal)
 # -----------------------
-logger = logging.getLogger("airparadis.streamlit")
-logger.setLevel(logging.INFO)
-_conn = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")  # Heroku Config Var
-if _conn:
-    logger.addHandler(AzureLogHandler(connection_string=_conn))
+# => Version idempotente : évite l’empilement de handlers à chaque rerun Streamlit
+@st.cache_resource
+def get_logger():
+    log = logging.getLogger("airparadis.streamlit")
+    log.setLevel(logging.INFO)
+    log.propagate = False  # évite la remontée vers le root logger (double logs)
+    _conn = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")  # Heroku Config Var
+    if _conn and not any(isinstance(h, AzureLogHandler) for h in log.handlers):
+        handler = AzureLogHandler(connection_string=_conn)
+        handler.setLevel(logging.INFO)
+        log.addHandler(handler)
+    return log
+
+logger = get_logger()
+
 
 def log_bad_pred(tweet_text: str, y_pred: int, y_proba: float | None = None):
     """Envoie un log 'bad_pred' avec le tweet + la prédiction (+ proba si dispo)"""
@@ -110,7 +120,10 @@ with col2:
                 )
                 st.success("Merci, votre signalement a été enregistré.")
             except Exception as e:
-                st.error(f"Impossible d'envoyer le signalement: {e}")
+                st.error(f"Impossible d'envoyer le signalement: {e})")
+
+
+
 
 
 
